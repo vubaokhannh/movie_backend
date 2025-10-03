@@ -1,0 +1,236 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MovieStatus {
+  COMING_SOON
+  RELEASED
+  ARCHIVED
+}
+
+enum Plan {
+  MONTHLY
+  YEARLY
+  TRIAL
+  CUSTOM
+}
+
+enum PaymentMethod {
+  MOMO
+  VNPAY
+  PAYPAL
+  STRIPE
+  CARD
+  BANK
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+// USER
+model User {
+  id               BigInt    @id @default(autoincrement())
+  email            String    @unique
+  password         String?
+  googleId         String?   @unique
+  name             String?
+  avatarUrl        String?
+  role             Role      @default(USER)
+  isPremium        Boolean   @default(false)
+  premiumExpiresAt DateTime?
+
+  subscriptions Subscription[]
+  payments      Payment[]
+  ratings       Rating[]
+  comments      Comment[]
+
+  createdAt DateTime @default(now())
+}
+
+// SUBSCRIPTION
+model Subscription {
+  id        BigInt             @id @default(autoincrement())
+  userId    BigInt
+  plan      Plan
+  status    SubscriptionStatus @default(PENDING)
+  startDate DateTime?
+  endDate   DateTime?
+  amount    Decimal            @default(0)
+  currency  String             @default("VND")
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id])
+  payments Payment[]
+}
+
+// PAYMENT
+model Payment {
+  id             BigInt        @id @default(autoincrement())
+  userId         BigInt
+  subscriptionId BigInt?
+  amount         Decimal
+  currency       String        @default("VND")
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  transactionId  String?
+  paidAt         DateTime?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id])
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+}
+
+// MOVIE
+model Movie {
+  id          BigInt      @id @default(autoincrement())
+  title       String
+  description String?
+  releaseYear Int?
+  duration    Int?
+  quality     String?
+  language    String?
+  director    String?
+  posterUrl   String?
+  trailerUrl  String?
+  videoUrl    String?
+  status      MovieStatus @default(RELEASED)
+  isPremium   Boolean     @default(false)
+
+  genres    MovieGenre[]
+  actors    MovieActor[]
+  keywords  MovieKeyword[]
+  countries MovieCountry[]
+  ratings   Rating[]
+  comments  Comment[]
+
+  createdAt DateTime @default(now())
+}
+
+// GENRE
+model Genre {
+  id     BigInt       @id @default(autoincrement())
+  name   String       @unique
+  movies MovieGenre[]
+}
+
+// MOVIE_GENRE (N-N)
+model MovieGenre {
+  movieId BigInt
+  genreId BigInt
+
+  movie Movie @relation(fields: [movieId], references: [id])
+  genre Genre @relation(fields: [genreId], references: [id])
+
+  @@id([movieId, genreId])
+}
+
+// ACTOR
+model Actor {
+  id     BigInt       @id @default(autoincrement())
+  name   String
+  movies MovieActor[]
+}
+
+// MOVIE_ACTOR (N-N)
+model MovieActor {
+  movieId BigInt
+  actorId BigInt
+
+  movie Movie @relation(fields: [movieId], references: [id])
+  actor Actor @relation(fields: [actorId], references: [id])
+
+  @@id([movieId, actorId])
+}
+
+// KEYWORD
+model Keyword {
+  id     BigInt         @id @default(autoincrement())
+  name   String         @unique
+  movies MovieKeyword[]
+}
+
+// MOVIE_KEYWORD (N-N)
+model MovieKeyword {
+  movieId   BigInt
+  keywordId BigInt
+
+  movie   Movie   @relation(fields: [movieId], references: [id])
+  keyword Keyword @relation(fields: [keywordId], references: [id])
+
+  @@id([movieId, keywordId])
+}
+
+// COUNTRY
+model Country {
+  id     BigInt         @id @default(autoincrement())
+  name   String         @unique
+  movies MovieCountry[]
+}
+
+// MOVIE_COUNTRY (N-N)
+model MovieCountry {
+  movieId   BigInt
+  countryId BigInt
+
+  movie   Movie   @relation(fields: [movieId], references: [id])
+  country Country @relation(fields: [countryId], references: [id])
+
+  @@id([movieId, countryId])
+}
+
+// RATING
+model Rating {
+  id      BigInt @id @default(autoincrement())
+  userId  BigInt
+  movieId BigInt
+  score   Int
+
+  user  User  @relation(fields: [userId], references: [id])
+  movie Movie @relation(fields: [movieId], references: [id])
+
+  @@unique([userId, movieId])
+}
+
+// COMMENT
+model Comment {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt
+  movieId   BigInt
+  content   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  movie Movie @relation(fields: [movieId], references: [id])
+}
