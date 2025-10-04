@@ -1,12 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -58,7 +51,7 @@ enum SubscriptionStatus {
 
 // USER
 model User {
-  id               BigInt    @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   email            String    @unique
   password         String?
   googleId         String?   @unique
@@ -78,8 +71,8 @@ model User {
 
 // SUBSCRIPTION
 model Subscription {
-  id        BigInt             @id @default(autoincrement())
-  userId    BigInt
+  id        Int                @id @default(autoincrement())
+  userId    Int
   plan      Plan
   status    SubscriptionStatus @default(PENDING)
   startDate DateTime?
@@ -95,9 +88,9 @@ model Subscription {
 
 // PAYMENT
 model Payment {
-  id             BigInt        @id @default(autoincrement())
-  userId         BigInt
-  subscriptionId BigInt?
+  id             Int           @id @default(autoincrement())
+  userId         Int
+  subscriptionId Int?
   amount         Decimal
   currency       String        @default("VND")
   method         PaymentMethod
@@ -114,7 +107,7 @@ model Payment {
 
 // MOVIE
 model Movie {
-  id          BigInt      @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   title       String
   description String?
   releaseYear Int?
@@ -140,15 +133,15 @@ model Movie {
 
 // GENRE
 model Genre {
-  id     BigInt       @id @default(autoincrement())
+  id     Int          @id @default(autoincrement())
   name   String       @unique
   movies MovieGenre[]
 }
 
 // MOVIE_GENRE (N-N)
 model MovieGenre {
-  movieId BigInt
-  genreId BigInt
+  movieId Int
+  genreId Int
 
   movie Movie @relation(fields: [movieId], references: [id])
   genre Genre @relation(fields: [genreId], references: [id])
@@ -158,15 +151,15 @@ model MovieGenre {
 
 // ACTOR
 model Actor {
-  id     BigInt       @id @default(autoincrement())
+  id     Int          @id @default(autoincrement())
   name   String
   movies MovieActor[]
 }
 
 // MOVIE_ACTOR (N-N)
 model MovieActor {
-  movieId BigInt
-  actorId BigInt
+  movieId Int
+  actorId Int
 
   movie Movie @relation(fields: [movieId], references: [id])
   actor Actor @relation(fields: [actorId], references: [id])
@@ -176,15 +169,15 @@ model MovieActor {
 
 // KEYWORD
 model Keyword {
-  id     BigInt         @id @default(autoincrement())
+  id     Int            @id @default(autoincrement())
   name   String         @unique
   movies MovieKeyword[]
 }
 
 // MOVIE_KEYWORD (N-N)
 model MovieKeyword {
-  movieId   BigInt
-  keywordId BigInt
+  movieId   Int
+  keywordId Int
 
   movie   Movie   @relation(fields: [movieId], references: [id])
   keyword Keyword @relation(fields: [keywordId], references: [id])
@@ -194,15 +187,15 @@ model MovieKeyword {
 
 // COUNTRY
 model Country {
-  id     BigInt         @id @default(autoincrement())
+  id     Int            @id @default(autoincrement())
   name   String         @unique
   movies MovieCountry[]
 }
 
 // MOVIE_COUNTRY (N-N)
 model MovieCountry {
-  movieId   BigInt
-  countryId BigInt
+  movieId   Int
+  countryId Int
 
   movie   Movie   @relation(fields: [movieId], references: [id])
   country Country @relation(fields: [countryId], references: [id])
@@ -212,9 +205,9 @@ model MovieCountry {
 
 // RATING
 model Rating {
-  id      BigInt @id @default(autoincrement())
-  userId  BigInt
-  movieId BigInt
+  id      Int @id @default(autoincrement())
+  userId  Int
+  movieId Int
   score   Int
 
   user  User  @relation(fields: [userId], references: [id])
@@ -225,9 +218,9 @@ model Rating {
 
 // COMMENT
 model Comment {
-  id        BigInt   @id @default(autoincrement())
-  userId    BigInt
-  movieId   BigInt
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  movieId   Int
   content   String
   createdAt DateTime @default(now())
 

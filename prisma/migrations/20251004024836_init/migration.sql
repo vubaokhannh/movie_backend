@@ -18,7 +18,7 @@ CREATE TYPE "SubscriptionStatus" AS ENUM ('PENDING', 'ACTIVE', 'EXPIRED', 'CANCE
 
 -- CreateTable
 CREATE TABLE "User" (
-    "id" BIGSERIAL NOT NULL,
+    "id" SERIAL NOT NULL,
     "email" TEXT NOT NULL,
     "password" TEXT,
     "googleId" TEXT,
@@ -34,8 +34,8 @@ CREATE TABLE "User" (
 
 -- CreateTable
 CREATE TABLE "Subscription" (
-    "id" BIGSERIAL NOT NULL,
-    "userId" BIGINT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
     "plan" "Plan" NOT NULL,
     "status" "SubscriptionStatus" NOT NULL DEFAULT 'PENDING',
     "startDate" TIMESTAMP(3),
@@ -50,9 +50,9 @@ CREATE TABLE "Subscription" (
 
 -- CreateTable
 CREATE TABLE "Payment" (
-    "id" BIGSERIAL NOT NULL,
-    "userId" BIGINT NOT NULL,
-    "subscriptionId" BIGINT,
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "subscriptionId" INTEGER,
     "amount" DECIMAL(65,30) NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'VND',
     "method" "PaymentMethod" NOT NULL,
@@ -68,7 +68,7 @@ CREATE TABLE "Payment" (
 
 -- CreateTable
 CREATE TABLE "Movie" (
-    "id" BIGSERIAL NOT NULL,
+    "id" SERIAL NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
     "releaseYear" INTEGER,
@@ -88,7 +88,7 @@ CREATE TABLE "Movie" (
 
 -- CreateTable
 CREATE TABLE "Genre" (
-    "id" BIGSERIAL NOT NULL,
+    "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
 
     CONSTRAINT "Genre_pkey" PRIMARY KEY ("id")
@@ -96,15 +96,15 @@ CREATE TABLE "Genre" (
 
 -- CreateTable
 CREATE TABLE "MovieGenre" (
-    "movieId" BIGINT NOT NULL,
-    "genreId" BIGINT NOT NULL,
+    "movieId" INTEGER NOT NULL,
+    "genreId" INTEGER NOT NULL,
 
     CONSTRAINT "MovieGenre_pkey" PRIMARY KEY ("movieId","genreId")
 );
 
 -- CreateTable
 CREATE TABLE "Actor" (
-    "id" BIGSERIAL NOT NULL,
+    "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
 
     CONSTRAINT "Actor_pkey" PRIMARY KEY ("id")
@@ -112,15 +112,15 @@ CREATE TABLE "Actor" (
 
 -- CreateTable
 CREATE TABLE "MovieActor" (
-    "movieId" BIGINT NOT NULL,
-    "actorId" BIGINT NOT NULL,
+    "movieId" INTEGER NOT NULL,
+    "actorId" INTEGER NOT NULL,
 
     CONSTRAINT "MovieActor_pkey" PRIMARY KEY ("movieId","actorId")
 );
 
 -- CreateTable
 CREATE TABLE "Keyword" (
-    "id" BIGSERIAL NOT NULL,
+    "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
 
     CONSTRAINT "Keyword_pkey" PRIMARY KEY ("id")
@@ -128,15 +128,15 @@ CREATE TABLE "Keyword" (
 
 -- CreateTable
 CREATE TABLE "MovieKeyword" (
-    "movieId" BIGINT NOT NULL,
-    "keywordId" BIGINT NOT NULL,
+    "movieId" INTEGER NOT NULL,
+    "keywordId" INTEGER NOT NULL,
 
     CONSTRAINT "MovieKeyword_pkey" PRIMARY KEY ("movieId","keywordId")
 );
 
 -- CreateTable
 CREATE TABLE "Country" (
-    "id" BIGSERIAL NOT NULL,
+    "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
 
     CONSTRAINT "Country_pkey" PRIMARY KEY ("id")
@@ -144,17 +144,17 @@ CREATE TABLE "Country" (
 
 -- CreateTable
 CREATE TABLE "MovieCountry" (
-    "movieId" BIGINT NOT NULL,
-    "countryId" BIGINT NOT NULL,
+    "movieId" INTEGER NOT NULL,
+    "countryId" INTEGER NOT NULL,
 
     CONSTRAINT "MovieCountry_pkey" PRIMARY KEY ("movieId","countryId")
 );
 
 -- CreateTable
 CREATE TABLE "Rating" (
-    "id" BIGSERIAL NOT NULL,
-    "userId" BIGINT NOT NULL,
-    "movieId" BIGINT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "movieId" INTEGER NOT NULL,
     "score" INTEGER NOT NULL,
 
     CONSTRAINT "Rating_pkey" PRIMARY KEY ("id")
@@ -162,9 +162,9 @@ CREATE TABLE "Rating" (
 
 -- CreateTable
 CREATE TABLE "Comment" (
-    "id" BIGSERIAL NOT NULL,
-    "userId" BIGINT NOT NULL,
-    "movieId" BIGINT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "movieId" INTEGER NOT NULL,
     "content" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
