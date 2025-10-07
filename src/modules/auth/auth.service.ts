@@ -1,89 +1,158 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { PrismaService } from '../shared/prisma/prisma.service';
-// import { RedisService } from '../shared/redis/redis.service';
-
+import { PrismaService } from '../../shared/prisma/prisma.service';
+import { JwtService } from '@nestjs/jwt';
+import { RedisService } from '../../shared/redis/redis.service';
 import { User } from '@prisma/client';
-
 import { RegisterDto } from './dtos/auth.dto';
 import * as bcrypt from 'bcrypt';
-import { JwtService } from '@nestjs/jwt';
+import { randomUUID } from 'crypto';
+
+interface JwtPayload {
+  uid: string;
+  pv: number;
+  roles: string[];
+  jti: string;
+}
 
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma: PrismaService,
-    private jwtService: JwtService,
-    // private redisService: RedisService,
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+    private readonly redisService: RedisService,
   ) {}
-  register = async (userData: RegisterDto): Promise<User> => {
-    const user = await this.prisma.user.findUnique({
+
+  async register(userData: RegisterDto): Promise<User> {
+    const existing = await this.prisma.user.findUnique({
       where: { email: userData.email },
     });
 
-    if (user) {
-      throw new HttpException(
-        { message: 'Email already exists' },
-        HttpStatus.BAD_REQUEST,
-      );
+    if (existing) {
+      throw new HttpException('Email already exists', HttpStatus.BAD_REQUEST);
     }
 
-    const hashPassword = await bcrypt.hash(userData.password, 10);
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-    const res = await this.prisma.user.create({
-      data: { ...userData, password: hashPassword },
+    const newUser = await this.prisma.user.create({
+      data: {
+        ...userData,
+        password: hashedPassword,
+        permissionValue: 1,
+        roles: ['user'],
+      },
     });
-    return { ...res, id: Number(res.id) } as User;
-  };
 
-  login = async (data: {
-    email: string;
-    password: string;
-  }): Promise<{ accessToken: string; refreshToken: string }> => {
+    const { password, ...safeUser } = newUser;
+    return safeUser as User;
+  }
+
+  async login(data: { email: string; password: string }) {
     const user = await this.prisma.user.findUnique({
       where: { email: data.email },
     });
 
     if (!user) {
-      throw new HttpException(
-        { message: 'Account does not exist' },
-        HttpStatus.UNAUTHORIZED,
-      );
+      throw new HttpException('Account not found', HttpStatus.UNAUTHORIZED);
     }
 
     if (!user.password) {
       throw new HttpException(
-        { message: 'This account does not support password login' },
+        'This account does not support password login',
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    const verify = await bcrypt.compare(data.password, user.password);
-    if (!verify) {
+    const valid = await bcrypt.compare(data.password, user.password);
+    if (!valid) {
+      throw new HttpException('Invalid password', HttpStatus.UNAUTHORIZED);
+    }
+
+    return this.generateTokens(user);
+  }
+
+  async refresh(refreshToken: string) {
+    try {
+      const decoded = await this.jwtService.verifyAsync<JwtPayload>(
+        refreshToken,
+        { secret: process.env.REFRESH_TOKEN_KEY },
+      );
+
+      const storedToken = await this.redisService.get(`refresh:${decoded.uid}`);
+
+      if (storedToken !== refreshToken) {
+        throw new HttpException(
+          'Invalid refresh token',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const newPayload: JwtPayload = {
+        uid: decoded.uid,
+        pv: decoded.pv,
+        roles: decoded.roles,
+        jti: randomUUID(),
+      };
+
+      const [accessToken, newRefreshToken] = await Promise.all([
+        this.generateAccessToken(newPayload),
+        this.generateRefreshToken(newPayload),
+      ]);
+
+      await this.redisService.set(
+        `refresh:${decoded.uid}`,
+        newRefreshToken,
+        'EX',
+        7 * 24 * 3600,
+      );
+
+      return { accessToken, refreshToken: newRefreshToken };
+    } catch (err) {
       throw new HttpException(
-        { message: 'Invalid password' },
+        'Token expired or invalid',
         HttpStatus.UNAUTHORIZED,
       );
     }
+  }
 
-    const payload = {
-      id: Number(user.id),
-      name: user.name,
-      email: user.email,
+  async logout(userId: number) {
+    await this.redisService.del(`refresh:${userId}`);
+    return { message: 'Logged out successfully' };
+  }
+
+  private async generateTokens(user: User) {
+    const payload: JwtPayload = {
+      uid: String(user.id),
+      pv: user.permissionValue,
+      roles: user.roles,
+      jti: randomUUID(),
     };
 
-    const accessToken = await this.jwtService.signAsync(payload, {
+    const [accessToken, refreshToken] = await Promise.all([
+      this.generateAccessToken(payload),
+      this.generateRefreshToken(payload),
+    ]);
+
+    await this.redisService.set(
+      `refresh:${user.id}`,
+      refreshToken,
+      'EX',
+      7 * 24 * 3600,
+    );
+
+    return { accessToken, refreshToken };
+  }
+
+  private async generateAccessToken(payload: JwtPayload): Promise<string> {
+    return this.jwtService.signAsync(payload, {
       secret: process.env.ACCESS_TOKEN_KEY,
       expiresIn: '15m',
     });
+  }
 
-    const refreshToken = await this.jwtService.signAsync(payload, {
+  private async generateRefreshToken(payload: JwtPayload): Promise<string> {
+    return this.jwtService.signAsync(payload, {
       secret: process.env.REFRESH_TOKEN_KEY,
       expiresIn: '7d',
     });
-
-    return {
-      accessToken,
-      refreshToken,
-    };
-  };
+  }
 }
