@@ -6,13 +6,13 @@ import {
   MinLength,
 } from 'class-validator';
 
-// 🔹 DTO Đăng ký
+
 export class RegisterDto {
-  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @IsEmail()
   email: string;
 
-  @IsNotEmpty({ message: 'Mật khẩu không được để trống' })
-  @MinLength(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự' })
+  @IsNotEmpty()
+  @MinLength(6)
   password: string;
 
   @IsOptional()
@@ -20,36 +20,36 @@ export class RegisterDto {
   name?: string;
 }
 
-// 🔹 DTO Đăng nhập
+
 export class LoginDto {
-  @IsNotEmpty({ message: 'Email không được để trống' })
-  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @IsNotEmpty()
+  @IsEmail()
   email: string;
 
-  @IsNotEmpty({ message: 'Mật khẩu không được để trống' })
-  @MinLength(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự' })
+  @IsNotEmpty()
+  @MinLength(6)
   password: string;
 }
 
-// 🔹 DTO Quên mật khẩu
+
 export class ForgotPasswordDto {
-  @IsNotEmpty({ message: 'Email không được để trống' })
-  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @IsNotEmpty()
+  @IsEmail()
   email: string;
 }
 
-// 🔹 DTO Đặt lại mật khẩu
+
 export class ResetPasswordDto {
-  @IsNotEmpty({ message: 'Token không được để trống' })
+  @IsNotEmpty()
   @IsString()
   token: string;
 
-  @IsNotEmpty({ message: 'Email không được để trống' })
-  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @IsNotEmpty()
+  @IsEmail()
   email: string;
 
-  @IsNotEmpty({ message: 'Mật khẩu mới không được để trống' })
+  @IsNotEmpty()
   @IsString()
-  @MinLength(6, { message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
+  @MinLength(6)
   newPassword: string;
 }

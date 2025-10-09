@@ -6,7 +6,12 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dtos/auth.dto';
+import {
+  RegisterDto,
+  LoginDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './dtos/auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -18,7 +23,7 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() body: { email: string; password: string }) {
+  async login(@Body() body: LoginDto) {
     return this.authService.login(body);
   }
 
@@ -33,7 +38,18 @@ export class AuthController {
     if (!accessToken) {
       throw new BadRequestException('Access token is required');
     }
-
     return this.authService.logout(accessToken);
+  }
+
+  
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: ForgotPasswordDto) {
+    return this.authService.forgotPassword(body);
+  }
+
+
+  @Post('reset-password')
+  async resetPassword(@Body() body: ResetPasswordDto) {
+    return this.authService.resetPassword(body);
   }
 }
