@@ -54,15 +54,11 @@ model User {
   id        Int     @id @default(autoincrement())
   email     String  @unique
   password  String?
+  salt      String?
   googleId  String? @unique
   name      String?
   avatarUrl String?
   role      Role    @default(USER)
-
-
-  permissionValue Int      @default(1)
-  roles           String[] @default([])
-  updatedAt       DateTime @updatedAt
 
   isPremium        Boolean   @default(false)
   premiumExpiresAt DateTime?
@@ -71,8 +67,21 @@ model User {
   payments      Payment[]
   ratings       Rating[]
   comments      Comment[]
+  resetTokens   ResetPasswordToken[]
 
+  updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+}
+
+model ResetPasswordToken {
+  id             Int      @id @default(autoincrement())
+  token          String   @unique
+  expirationDate DateTime
+  consumed       Boolean  @default(false)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // SUBSCRIPTION

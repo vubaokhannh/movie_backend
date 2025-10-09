@@ -1,4 +1,10 @@
-import { Controller, Post, Body, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Req,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dtos/auth.dto';
 
@@ -22,8 +28,12 @@ export class AuthController {
   }
 
   @Post('logout')
-  async logout(@Req() req: any) {
-    const userId = req.user?.id;
-    return this.authService.logout(userId);
+  async logout(@Req() req) {
+    const accessToken = req.headers.authorization?.split(' ')[1];
+    if (!accessToken) {
+      throw new BadRequestException('Access token is required');
+    }
+
+    return this.authService.logout(accessToken);
   }
 }
