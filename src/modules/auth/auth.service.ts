@@ -24,7 +24,8 @@ import { appConfig } from '../../config';
 interface JwtPayload {
   uid: string;
   jti: string;
-  // exp, iat will be present at runtime but not required here
+  role?: string;
+  permissions?: string[];
 }
 
 @Injectable()
@@ -68,6 +69,15 @@ export class AuthService {
   async login(data: { email: string; password: string }) {
     const user = await this.prisma.user.findUnique({
       where: { email: data.email },
+      include: {
+        role: {
+          include: {
+            permissions: {
+              include: { permission: true },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -123,9 +133,29 @@ export class AuthService {
         } as any);
       }
 
+      const user = await this.prisma.user.findUnique({
+        where: { id: Number(decoded.uid) },
+        include: {
+          role: {
+            include: {
+              permissions: {
+                include: { permission: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
       const newPayload: JwtPayload = {
-        uid: decoded.uid,
+        uid: String(user.id),
         jti: randomUUID(),
+        role: user.role?.name,
+        permissions:
+          user.role?.permissions.map((rp) => rp.permission.code) ?? [],
       };
 
       const [accessToken, newRefreshToken] = await Promise.all([
@@ -136,6 +166,7 @@ export class AuthService {
       const refreshTTLSeconds = this._parseTTLToSeconds(
         appConfig.token.refreshTokenExpiresIn,
       );
+
       await this.redisService.set(
         REDIS_KEYS.refreshToken(decoded.uid, newPayload.jti),
         newRefreshToken,
@@ -158,15 +189,11 @@ export class AuthService {
   }
 
   async logout(accessToken: string, userId?: number) {
-    console.log('Access Token nhận được:', accessToken);
-
     try {
       const decoded = await this.jwtService.verifyAsync<any>(accessToken, {
-        secret: process.env.ACCESS_TOKEN_KEY || 'default_access_secret',
+        secret: appConfig.token.accessTokenKey,
         ignoreExpiration: true,
       });
-
-      console.log('Decoded token:', decoded);
 
       const uid = String(userId || decoded.uid);
       const jti = decoded.jti;
@@ -190,9 +217,29 @@ export class AuthService {
   }
 
   private async generateTokens(user: User) {
+    const fullUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        role: {
+          include: {
+            permissions: {
+              include: { permission: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!fullUser) {
+      throw new UnauthorizedException('User not found');
+    }
+
     const payload: JwtPayload = {
-      uid: String(user.id),
+      uid: String(fullUser.id),
       jti: randomUUID(),
+      role: fullUser.role?.name,
+      permissions:
+        fullUser.role?.permissions.map((rp) => rp.permission.code) ?? [],
     };
 
     const [accessToken, refreshToken] = await Promise.all([
@@ -204,7 +251,7 @@ export class AuthService {
       appConfig.token.refreshTokenExpiresIn,
     );
     await this.redisService.set(
-      REDIS_KEYS.refreshToken(user.id, payload.jti),
+      REDIS_KEYS.refreshToken(fullUser.id, payload.jti),
       refreshToken,
       'EX',
       refreshTTLSeconds,
@@ -227,10 +274,6 @@ export class AuthService {
     });
   }
 
-  // --------------------------
-  // HELPERS
-  // chuyển đổi chuỗi TTL thời gian sống của token hoặc cache — sang giây (seconds)
-  // --------------------------
   private _parseTTLToSeconds(ttl: string): number {
     if (!ttl) return 0;
     const match = /^(\d+)([smhd])?$/.exec(ttl);
